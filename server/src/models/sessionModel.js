@@ -1,0 +1,93 @@
+const pool = require('../config/db');
+const { newSessionId } = require('../utils/ids');
+
+const IDLE_TIMEOUT_MINUTES = 90;
+
+async function getOpenSessionForTable(tableId) {
+  const [rows] = await pool.query(
+    `SELECT * FROM table_sessions WHERE tableId = :tableId AND status = 'OPEN'
+     ORDER BY openedAt DESC LIMIT 1`,
+    { tableId }
+  );
+  const session = rows[0];
+  if (!session) return null;
+
+  const idleMinutes = (Date.now() - new Date(session.lastActivityAt).getTime()) / 60000;
+  if (idleMinutes > IDLE_TIMEOUT_MINUTES) {
+    await pool.query(
+      `UPDATE table_sessions SET status = 'CLOSED', closedAt = NOW() WHERE id = :id`,
+      { id: session.id }
+    );
+    return null;
+  }
+  return session;
+}
+
+async function getOrCreateSessionForTable(tableId) {
+  const existing = await getOpenSessionForTable(tableId);
+  if (existing) return existing;
+
+  const id = newSessionId(tableId);
+  await pool.query(
+    `INSERT INTO table_sessions (id, tableId, status) VALUES (:id, :tableId, 'OPEN')`,
+    { id, tableId }
+  );
+  const [rows] = await pool.query('SELECT * FROM table_sessions WHERE id = :id', { id });
+  return rows[0];
+}
+
+async function getSessionById(sessionId, conn = pool) {
+  const [rows] = await conn.query('SELECT * FROM table_sessions WHERE id = :sessionId', {
+    sessionId,
+  });
+  return rows[0] || null;
+}
+
+async function touchSession(sessionId, conn = pool) {
+  await conn.query('UPDATE table_sessions SET lastActivityAt = NOW() WHERE id = :sessionId', {
+    sessionId,
+  });
+}
+
+async function addToSessionTotals(sessionId, { amount, tax }, conn = pool) {
+  await conn.query(
+    `UPDATE table_sessions
+     SET totalAmount = totalAmount + :amount, totalTax = totalTax + :tax
+     WHERE id = :sessionId`,
+    { sessionId, amount, tax }
+  );
+}
+
+async function getOrdersForSession(sessionId) {
+  const [rows] = await pool.query(
+    'SELECT * FROM orders WHERE sessionId = :sessionId ORDER BY createdAt',
+    { sessionId }
+  );
+  return rows;
+}
+
+async function closeSession(sessionId, notes) {
+  await pool.query(
+    `UPDATE table_sessions SET status = 'CLOSED', closedAt = NOW(), notes = :notes WHERE id = :sessionId`,
+    { sessionId, notes: notes || null }
+  );
+  return getSessionById(sessionId);
+}
+
+async function getActiveSessions() {
+  const [rows] = await pool.query(
+    `SELECT * FROM table_sessions WHERE status = 'OPEN' ORDER BY openedAt`
+  );
+  return rows;
+}
+
+module.exports = {
+  getOpenSessionForTable,
+  getOrCreateSessionForTable,
+  getSessionById,
+  touchSession,
+  addToSessionTotals,
+  getOrdersForSession,
+  closeSession,
+  getActiveSessions,
+};

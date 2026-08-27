@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: food-politics-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false # your Vercel/Netlify URL, e.g. https://food-politics.vercel.app
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: true
+      - key: DB_SSL_CA
+        sync: false # optional — leave blank to accept the provider's default cert chain
+      - key: JWT_SECRET
+        generateValue: true # generated once on first deploy, stays stable afterward
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: MOBILE_INDEX_KEY
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true # never change this after go-live — it decrypts stored phone numbers
+      - key: TOTAL_TABLES
+        value: 15
+      - key: CGST_RATE
+        value: 2.5
+      - key: SGST_RATE
+        value: 2.5
+      - key: GSTIN
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_SERVER_EMAIL
+        sync: false
+      - key: SEED_SERVER_PASSWORD
+        sync: false
+      - key: SEED_KITCHEN_EMAIL
+        sync: false
+      - key: SEED_KITCHEN_PASSWORD
+        sync: false
