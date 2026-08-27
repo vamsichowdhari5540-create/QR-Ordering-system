@@ -1,0 +1,16 @@
+# Signing key — never commit. Whoever holds this can publish updates that
+# Android accepts as this same app. Back it up somewhere safe and private:
+# lose it and you cannot ship an update to already-installed devices.
+android.keystore
+*.jks
+
+# Build outputs
+build/
+app/build/
+.gradle/
+*.apk
+*.idsig
+
+# Scratch
+answers.txt
+store_icon.png

@@ -1,0 +1,42 @@
+{
+  "packageId": "com.foodpolitics.staff",
+  "host": "qr-ordering-system-psi.vercel.app",
+  "name": "Vijay's Food Politics — Staff",
+  "launcherName": "FP Staff",
+  "display": "standalone",
+  "themeColor": "#1f241f",
+  "themeColorDark": "#1f241f",
+  "navigationColor": "#1f241f",
+  "navigationColorDark": "#1f241f",
+  "navigationDividerColor": "#1f241f",
+  "navigationDividerColorDark": "#1f241f",
+  "backgroundColor": "#f3f5ef",
+  "enableNotifications": false,
+  "startUrl": "/admin",
+  "iconUrl": "https://qr-ordering-system-psi.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://qr-ordering-system-psi.vercel.app/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "foodpolitics"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://qr-ordering-system-psi.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://qr-ordering-system-psi.vercel.app/",
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0"
+}

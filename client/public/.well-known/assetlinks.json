@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.foodpolitics.staff",
+      "sha256_cert_fingerprints": [
+        "47:E3:01:A2:31:E8:5D:FC:35:3A:AC:85:65:96:38:C3:44:BE:20:B1:CE:3A:63:87:F1:47:32:00:4F:08:96:A5"
+      ]
+    }
+  }
+]
