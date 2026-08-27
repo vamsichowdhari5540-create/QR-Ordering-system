@@ -23,5 +23,8 @@
     "mysql2": "^3.11.0",
     "pdfkit": "^0.20.1",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4"
   }
 }
