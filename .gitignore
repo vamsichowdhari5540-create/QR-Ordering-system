@@ -3,3 +3,6 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Generated presentation — rebuild with: node server/scripts/generate-ppt.js
+Food-Politics-Presentation.pptx
