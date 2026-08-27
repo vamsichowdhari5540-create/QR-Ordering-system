@@ -7,25 +7,24 @@ async function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 
   const ssl = process.env.DB_SSL === 'true'
-    ? { ca: process.env.DB_SSL_CA || undefined, rejectUnauthorized: process.env.DB_SSL_CA ? true : false }
+    ? { ca: process.env.DB_SSL_CA?.trim() || undefined, rejectUnauthorized: process.env.DB_SSL_CA ? true : false }
     : undefined;
 
   const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST?.trim(),
+    port: process.env.DB_PORT?.trim() || 3306,
+    user: process.env.DB_USER?.trim(),
+    password: process.env.DB_PASSWORD?.trim(),
     multipleStatements: true,
     ssl,
   });
 
-  await connection.query(
-    `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\` CHARACTER SET utf8mb4`
-  );
-  await connection.changeUser({ database: process.env.DB_NAME });
+  const dbName = process.env.DB_NAME?.trim();
+  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4`);
+  await connection.changeUser({ database: dbName });
 
   await connection.query(schema);
-  console.log('Schema applied to database:', process.env.DB_NAME);
+  console.log('Schema applied to database:', dbName);
 
   await connection.end();
 }

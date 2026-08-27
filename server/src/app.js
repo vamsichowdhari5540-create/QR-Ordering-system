@@ -26,7 +26,9 @@ app.use((req, res, next) => {
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    // A trailing newline from a pasted env var value would never match the
+    // real Origin header a browser sends, silently breaking every request.
+    origin: process.env.FRONTEND_URL?.trim(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT'],
   })
