@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Spinner from '../components/Spinner.jsx';
 import { useInstallPrompt } from '../useInstallPrompt.js';
@@ -61,67 +62,9 @@ function OrderTicket({ order, onReady, busy }) {
   );
 }
 
-function KitchenLogin({ onSignedIn }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function submit(e) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const { token, admin } = await api.adminLogin(email.trim(), password);
-      localStorage.setItem('fp_admin_token', token);
-      localStorage.setItem('fp_admin_role', admin.role);
-      onSignedIn(token);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="kt-shell">
-      <div className="kt-signin">
-        <h1>Kitchen display</h1>
-        <p>Sign in once on this tablet — it'll stay signed in.</p>
-
-        {error && <div className="error-banner">{error}</div>}
-
-        <form onSubmit={submit}>
-          <div className="field-group">
-            <span className="label">Email</span>
-            <input
-              type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="kitchen@foodpolitics.local"
-              autoFocus
-            />
-          </div>
-          <div className="field-group">
-            <span className="label">Password</span>
-            <input
-              type="text"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          <button className="primary-btn" disabled={loading} type="submit">
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export default function Kitchen() {
-  const [token, setToken] = useState(() => localStorage.getItem('fp_admin_token'));
+  const navigate = useNavigate();
+  const [token] = useState(() => localStorage.getItem('fp_admin_token'));
   const [orders, setOrders] = useState(null);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
@@ -137,26 +80,29 @@ export default function Kitchen() {
       if (/unauthorized|invalid/i.test(e.message)) {
         localStorage.removeItem('fp_admin_token');
         localStorage.removeItem('fp_admin_role');
-        setToken(null);
+        navigate('/admin');
       }
     }
-  }, [token]);
+  }, [token, navigate]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      navigate('/admin');
+      return;
+    }
     load();
     const id = setInterval(load, 4000);
     return () => clearInterval(id);
-  }, [token, load]);
+  }, [token, load, navigate]);
 
-  if (!token) {
-    return <KitchenLogin onSignedIn={setToken} />;
-  }
+  // The effect above is already navigating to the staff login; render nothing
+  // rather than flashing an empty kitchen queue on the way out.
+  if (!token) return null;
 
   function logout() {
     localStorage.removeItem('fp_admin_token');
     localStorage.removeItem('fp_admin_role');
-    setToken(null);
+    navigate('/admin');
   }
 
   async function markReady(orderId) {

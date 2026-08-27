@@ -1685,25 +1685,6 @@ input:focus {
   cursor: not-allowed;
 }
 
-.kt-signin {
-  max-width: 24rem;
-  margin: 0 auto;
-  padding: 6rem 1.5rem 0;
-  text-align: center;
-}
-
-.kt-signin h1 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.kt-signin p {
-  color: #b7bfb0;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
 /* ---------- admin: today's menu ---------- */
 
 .menu-sub {

@@ -57,6 +57,7 @@ export default function AdminMenu() {
 
   function logout() {
     localStorage.removeItem('fp_admin_token');
+    localStorage.removeItem('fp_admin_role');
     navigate('/admin');
   }
 
