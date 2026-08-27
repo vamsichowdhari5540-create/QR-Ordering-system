@@ -1,32 +1,28 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const mysql = require('mysql2/promise');
+const { Client } = require('pg');
 
 async function migrate() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 
-  const ssl = process.env.DB_SSL === 'true'
-    ? { ca: process.env.DB_SSL_CA?.trim() || undefined, rejectUnauthorized: process.env.DB_SSL_CA ? true : false }
-    : undefined;
-
-  const connection = await mysql.createConnection({
+  const client = new Client({
     host: process.env.DB_HOST?.trim(),
-    port: process.env.DB_PORT?.trim() || 3306,
+    port: Number(process.env.DB_PORT?.trim()) || 5432,
     user: process.env.DB_USER?.trim(),
     password: process.env.DB_PASSWORD?.trim(),
-    multipleStatements: true,
-    ssl,
+    database: process.env.DB_NAME?.trim() || 'postgres',
+    ssl: process.env.DB_SSL === 'false' ? undefined : { rejectUnauthorized: false },
   });
 
-  const dbName = process.env.DB_NAME?.trim();
-  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4`);
-  await connection.changeUser({ database: dbName });
+  await client.connect();
+  // Supabase already provisions the "postgres" database — nothing to create,
+  // just apply the schema. pg's query() natively runs multi-statement SQL
+  // (no mysql2-style multipleStatements flag needed).
+  await client.query(schema);
+  console.log('Schema applied to database:', client.database);
 
-  await connection.query(schema);
-  console.log('Schema applied to database:', dbName);
-
-  await connection.end();
+  await client.end();
 }
 
 migrate().catch((err) => {

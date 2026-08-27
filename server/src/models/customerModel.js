@@ -19,7 +19,7 @@ async function findOrCreateCustomer(conn, { name, mobile }) {
 
   const encrypted = encryptMobile(mobile);
   const [result] = await conn.query(
-    `INSERT INTO customers (mobileIndex, mobileEncrypted, name) VALUES (:index, :encrypted, :name)`,
+    `INSERT INTO customers (mobileIndex, mobileEncrypted, name) VALUES (:index, :encrypted, :name) RETURNING id`,
     { index, encrypted, name }
   );
   return result.insertId;

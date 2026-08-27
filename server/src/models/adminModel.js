@@ -10,7 +10,7 @@ async function findByEmail(email) {
 
 async function createAdmin({ email, passwordHash, name, role }) {
   const [result] = await pool.query(
-    'INSERT INTO admins (email, passwordHash, name, role) VALUES (:email, :passwordHash, :name, :role)',
+    'INSERT INTO admins (email, passwordHash, name, role) VALUES (:email, :passwordHash, :name, :role) RETURNING id',
     { email, passwordHash, name: name || null, role: role || 'OWNER' }
   );
   return result.insertId;

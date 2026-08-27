@@ -1,21 +1,17 @@
-// Order IDs: ORD-DDMM-NNN, sequence resets daily via order_sequences table.
-async function nextOrderId(conn) {
-  const now = new Date();
-  const dd = String(now.getDate()).padStart(2, '0');
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dateKey = `${dd}${mm}`;
+const { TODAY } = require('./businessDay');
 
-  await conn.query(
-    `INSERT INTO order_sequences (dateKey, seq) VALUES (:dateKey, 1)
-     ON DUPLICATE KEY UPDATE seq = seq + 1`,
-    { dateKey }
+// Order IDs: ORD-DDMM-NNN, sequence resets daily via order_sequences table.
+// dateKey comes from the restaurant's local calendar day, not Node's clock
+// or the database's UTC one — an order placed after midnight IST must land
+// in that day's sequence, not the previous UTC day's.
+async function nextOrderId(conn) {
+  const [{ dateKey, seq }] = await conn.query(
+    `INSERT INTO order_sequences (dateKey, seq)
+     VALUES (TO_CHAR(${TODAY}, 'DDMM'), 1)
+     ON CONFLICT (dateKey) DO UPDATE SET seq = order_sequences.seq + 1
+     RETURNING dateKey, seq`
   );
-  const [rows] = await conn.query(
-    'SELECT seq FROM order_sequences WHERE dateKey = :dateKey',
-    { dateKey }
-  );
-  const seq = String(rows[0].seq).padStart(3, '0');
-  return `ORD-${dateKey}-${seq}`;
+  return `ORD-${dateKey}-${String(seq).padStart(3, '0')}`;
 }
 
 // Session IDs: sess_<timestamp>_<table>, unique per re-seating.

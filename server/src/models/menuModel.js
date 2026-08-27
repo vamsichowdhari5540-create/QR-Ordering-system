@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { TODAY } = require('../utils/businessDay');
 
 async function getCategories() {
   const [rows] = await pool.query(
@@ -9,9 +10,9 @@ async function getCategories() {
 
 async function getItemsByCategory(categoryId, { onlyAvailable = false } = {}) {
   let sql = `SELECT id, categoryId, name, description, basePrice, image, displayOrder,
-                    (outOfStockDate IS NULL OR outOfStockDate <> CURDATE()) AS available
+                    (outOfStockDate IS NULL OR outOfStockDate <> ${TODAY}) AS available
              FROM items WHERE categoryId = :categoryId AND active = TRUE`;
-  if (onlyAvailable) sql += ' AND (outOfStockDate IS NULL OR outOfStockDate <> CURDATE())';
+  if (onlyAvailable) sql += ` AND (outOfStockDate IS NULL OR outOfStockDate <> ${TODAY})`;
   sql += ' ORDER BY displayOrder, name';
   const [items] = await pool.query(sql, { categoryId });
   if (items.length === 0) return items;
@@ -51,7 +52,7 @@ async function getItemsByCategory(categoryId, { onlyAvailable = false } = {}) {
 async function getItemById(itemId, conn = pool) {
   const [rows] = await conn.query(
     `SELECT id, name, basePrice, gstApplicable,
-            (outOfStockDate IS NULL OR outOfStockDate <> CURDATE()) AS available
+            (outOfStockDate IS NULL OR outOfStockDate <> ${TODAY}) AS available
      FROM items WHERE id = :itemId`,
     { itemId }
   );
@@ -72,10 +73,10 @@ async function getVariantById(variantId, conn = pool) {
 async function setItemAvailability(itemId, available) {
   const sql = available
     ? 'UPDATE items SET outOfStockDate = NULL WHERE id = :itemId'
-    : 'UPDATE items SET outOfStockDate = CURDATE() WHERE id = :itemId';
+    : `UPDATE items SET outOfStockDate = ${TODAY} WHERE id = :itemId`;
   await pool.query(sql, { itemId });
   const [rows] = await pool.query(
-    `SELECT id, name, (outOfStockDate IS NULL OR outOfStockDate <> CURDATE()) AS available
+    `SELECT id, name, (outOfStockDate IS NULL OR outOfStockDate <> ${TODAY}) AS available
      FROM items WHERE id = :itemId`,
     { itemId }
   );
@@ -104,7 +105,7 @@ async function getFullMenuForCustomer() {
 
 async function createCategory({ name, displayOrder }) {
   const [result] = await pool.query(
-    'INSERT INTO categories (name, displayOrder) VALUES (:name, :displayOrder)',
+    'INSERT INTO categories (name, displayOrder) VALUES (:name, :displayOrder) RETURNING id',
     { name, displayOrder: displayOrder || 0 }
   );
   return result.insertId;
@@ -127,7 +128,7 @@ async function createItem({ categoryId, name, description, basePrice, displayOrd
     await conn.beginTransaction();
     const [result] = await conn.query(
       `INSERT INTO items (categoryId, name, description, basePrice, displayOrder)
-       VALUES (:categoryId, :name, :description, :basePrice, :displayOrder)`,
+       VALUES (:categoryId, :name, :description, :basePrice, :displayOrder) RETURNING id`,
       { categoryId, name, description: description || null, basePrice, displayOrder: displayOrder || 0 }
     );
     const itemId = result.insertId;
@@ -141,7 +142,7 @@ async function createItem({ categoryId, name, description, basePrice, displayOrd
 
     for (const [i, m] of (modifiers || []).entries()) {
       const [modResult] = await conn.query(
-        'INSERT INTO item_modifiers (itemId, name, type, displayOrder) VALUES (:itemId, :name, :type, :i)',
+        'INSERT INTO item_modifiers (itemId, name, type, displayOrder) VALUES (:itemId, :name, :type, :i) RETURNING id',
         { itemId, name: m.name, type: m.type || 'RADIO', i }
       );
       const modifierId = modResult.insertId;

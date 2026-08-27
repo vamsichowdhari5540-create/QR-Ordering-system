@@ -197,7 +197,7 @@ async function seedMenu() {
   const categoryIds = {};
   for (const c of categories) {
     const [result] = await pool.query(
-      'INSERT INTO categories (name, displayOrder) VALUES (:name, :displayOrder)',
+      'INSERT INTO categories (name, displayOrder) VALUES (:name, :displayOrder) RETURNING id',
       c
     );
     categoryIds[c.name] = result.insertId;
@@ -217,7 +217,7 @@ async function seedMenu() {
   for (const item of items) {
     const [result] = await pool.query(
       `INSERT INTO items (categoryId, name, description, basePrice, displayOrder)
-       VALUES (:categoryId, :name, :description, :basePrice, 1)`,
+       VALUES (:categoryId, :name, :description, :basePrice, 1) RETURNING id`,
       { categoryId: categoryIds[item.category], ...item }
     );
     const itemId = result.insertId;
@@ -231,7 +231,7 @@ async function seedMenu() {
 
     for (const [i, m] of item.modifiers.entries()) {
       const [modResult] = await pool.query(
-        'INSERT INTO item_modifiers (itemId, name, type, displayOrder) VALUES (:itemId, :name, :type, :displayOrder)',
+        'INSERT INTO item_modifiers (itemId, name, type, displayOrder) VALUES (:itemId, :name, :type, :displayOrder) RETURNING id',
         { itemId, name: m.name, type: m.type, displayOrder: i }
       );
       const modifierId = modResult.insertId;

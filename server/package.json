@@ -20,8 +20,8 @@
     "express-validator": "^7.2.0",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.11.0",
     "pdfkit": "^0.20.1",
+    "pg": "^8.23.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {

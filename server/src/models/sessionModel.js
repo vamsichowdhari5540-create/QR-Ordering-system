@@ -5,14 +5,18 @@ const IDLE_TIMEOUT_MINUTES = 90;
 
 async function getOpenSessionForTable(tableId) {
   const [rows] = await pool.query(
-    `SELECT * FROM table_sessions WHERE tableId = :tableId AND status = 'OPEN'
+    `SELECT *, EXTRACT(EPOCH FROM (NOW() - lastActivityAt)) / 60 AS idleMinutes
+     FROM table_sessions WHERE tableId = :tableId AND status = 'OPEN'
      ORDER BY openedAt DESC LIMIT 1`,
     { tableId }
   );
   const session = rows[0];
   if (!session) return null;
 
-  const idleMinutes = (Date.now() - new Date(session.lastActivityAt).getTime()) / 60000;
+  // Measured by the database against its own clock — comparing a DB
+  // timestamp to the app server's Date.now() silently breaks whenever the
+  // two machines' timezones disagree.
+  const { idleMinutes } = session;
   if (idleMinutes > IDLE_TIMEOUT_MINUTES) {
     await pool.query(
       `UPDATE table_sessions SET status = 'CLOSED', closedAt = NOW() WHERE id = :id`,

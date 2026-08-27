@@ -1,24 +1,26 @@
 const pool = require('../config/db');
+const { TODAY, localDate } = require('../utils/businessDay');
 
-// "Today" must be resolved by the database's own clock, not the Node
-// process's — the app server's OS timezone (IST locally, UTC on Render)
-// can disagree with the DB's, and comparing DATE(createdAt) against a
-// JS-computed date silently drops today's orders near midnight. Using
-// CURDATE() directly in SQL sidesteps that instead of reconstructing a
-// date string from a returned Date object (which has its own local/UTC
-// pitfalls when read back in JS).
+// "Today" is the restaurant's local calendar day, resolved in SQL rather than
+// from the Node process's clock — the app server's OS timezone (IST locally,
+// UTC on the host) can disagree with the database's, and either one
+// disagreeing with the restaurant's silently drops the night's orders.
+// See utils/businessDay.js for why this is explicit rather than a session
+// timezone setting.
+const ORDER_DATE = localDate('createdAt');
+
 async function getDaySummary(date) {
-  const dateExpr = date ? ':date' : 'CURDATE()';
+  const dateExpr = date ? ':date::date' : TODAY;
   const params = date ? { date } : {};
 
   const [totals] = await pool.query(
     `SELECT
-      DATE_FORMAT(${dateExpr}, '%Y-%m-%d') AS date,
+      TO_CHAR(${dateExpr}, 'YYYY-MM-DD') AS date,
       COUNT(*) AS totalOrders,
       COALESCE(SUM(grandTotal), 0) AS totalRevenue,
       COALESCE(SUM(taxTotal), 0) AS totalTax
      FROM orders
-     WHERE DATE(createdAt) = ${dateExpr} AND status IN ('CONFIRMED', 'READY', 'COMPLETED')`,
+     WHERE ${ORDER_DATE} = ${dateExpr} AND status IN ('CONFIRMED', 'READY', 'COMPLETED')`,
     params
   );
 
@@ -28,7 +30,8 @@ async function getDaySummary(date) {
      JOIN orders o ON o.id = oi.orderId
      JOIN items i ON i.id = oi.itemId
      JOIN categories c ON c.id = i.categoryId
-     WHERE DATE(o.createdAt) = ${dateExpr} AND o.status IN ('CONFIRMED', 'READY', 'COMPLETED')
+     WHERE ${localDate('o.createdAt')} = ${dateExpr}
+       AND o.status IN ('CONFIRMED', 'READY', 'COMPLETED')
      GROUP BY c.name
      ORDER BY revenue DESC`,
     params
@@ -43,7 +46,7 @@ async function getDaySummary(date) {
 // Every order taken on a given day, newest first, with the table visit it belonged to.
 // Cancelled orders are included on purpose — the owner wants to see what was voided.
 async function getDayOrders(date) {
-  const dateExpr = date ? ':date' : 'CURDATE()';
+  const dateExpr = date ? ':date::date' : TODAY;
   const params = date ? { date } : {};
 
   const [rows] = await pool.query(
@@ -52,7 +55,7 @@ async function getDayOrders(date) {
             s.status AS sessionStatus, s.openedAt, s.closedAt
      FROM orders o
      JOIN table_sessions s ON s.id = o.sessionId
-     WHERE DATE(o.createdAt) = ${dateExpr}
+     WHERE ${localDate('o.createdAt')} = ${dateExpr}
      ORDER BY o.createdAt DESC`,
     params
   );
@@ -63,10 +66,10 @@ async function upsertDailyLedger(date) {
   const summary = await getDaySummary(date);
   await pool.query(
     `INSERT INTO daily_ledger (date, totalOrders, totalRevenue, totalTax, closedAt)
-     VALUES (:date, :totalOrders, :totalRevenue, :totalTax, NOW())
-     ON DUPLICATE KEY UPDATE
-       totalOrders = VALUES(totalOrders), totalRevenue = VALUES(totalRevenue),
-       totalTax = VALUES(totalTax), closedAt = NOW()`,
+     VALUES (:date::date, :totalOrders, :totalRevenue, :totalTax, NOW())
+     ON CONFLICT (date) DO UPDATE SET
+       totalOrders = EXCLUDED.totalOrders, totalRevenue = EXCLUDED.totalRevenue,
+       totalTax = EXCLUDED.totalTax, closedAt = EXCLUDED.closedAt`,
     summary
   );
   return summary;

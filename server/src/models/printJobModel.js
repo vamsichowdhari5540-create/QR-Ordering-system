@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 async function enqueue(orderId, type, payload) {
   const [result] = await pool.query(
-    `INSERT INTO print_jobs (orderId, type, status, payload) VALUES (:orderId, :type, 'PENDING', :payload)`,
+    `INSERT INTO print_jobs (orderId, type, status, payload) VALUES (:orderId, :type, 'PENDING', :payload) RETURNING id`,
     { orderId, type, payload: JSON.stringify(payload) }
   );
   const [rows] = await pool.query('SELECT * FROM print_jobs WHERE id = :id', {
