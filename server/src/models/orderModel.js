@@ -133,7 +133,13 @@ async function getOrderById(orderId) {
     ...order,
     items: items.map((item) => ({
       ...item,
-      selectedModifiers: JSON.parse(item.selectedModifiers),
+      // Real MySQL's JSON columns come back already decoded; MariaDB (e.g.
+      // local XAMPP) stores JSON as plain text and returns it as a string.
+      // Only parse when the driver actually handed back a string.
+      selectedModifiers:
+        typeof item.selectedModifiers === 'string'
+          ? JSON.parse(item.selectedModifiers)
+          : item.selectedModifiers || [],
     })),
   };
 }

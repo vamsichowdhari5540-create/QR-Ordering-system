@@ -4,18 +4,28 @@ function normalizeMobile(mobile) {
   return String(mobile).trim();
 }
 
+// Host dashboards' env var boxes are often multi-line textareas — an
+// accidental Enter after pasting leaves a trailing newline that would
+// otherwise silently change every HMAC/encryption key derived from it.
+function mobileIndexKey() {
+  return process.env.MOBILE_INDEX_KEY?.trim();
+}
+
+function encryptionKey() {
+  return Buffer.from(process.env.ENCRYPTION_KEY?.trim() || '', 'hex');
+}
+
 // Deterministic index for lookups — never reversible, never logged raw.
 function mobileIndex(mobile) {
-  const key = process.env.MOBILE_INDEX_KEY;
   return crypto
-    .createHmac('sha256', key)
+    .createHmac('sha256', mobileIndexKey())
     .update(normalizeMobile(mobile))
     .digest('hex');
 }
 
 // AES-256-GCM encryption for display values (receipts, admin dashboard).
 function encryptMobile(mobile) {
-  const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+  const key = encryptionKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([
@@ -27,7 +37,7 @@ function encryptMobile(mobile) {
 }
 
 function decryptMobile(encrypted) {
-  const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+  const key = encryptionKey();
   const [ivHex, authTagHex, ciphertextHex] = encrypted.split(':');
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
   decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
