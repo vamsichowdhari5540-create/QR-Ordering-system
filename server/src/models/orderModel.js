@@ -187,6 +187,20 @@ async function cancelOrder(orderId) {
     );
     await sessionModel.touchSession(order.sessionId, conn);
 
+    // If that was the table's only order, there's nothing left to bill — free
+    // the table now instead of leaving it stuck "awaiting bill" with no
+    // orders and no way to settle it until the idle timeout eventually closes it.
+    const [[{ activeCount }]] = await conn.query(
+      `SELECT COUNT(*) AS activeCount FROM orders WHERE sessionId = :sessionId AND status != 'CANCELLED'`,
+      { sessionId: order.sessionId }
+    );
+    if (activeCount === 0) {
+      await conn.query(
+        `UPDATE table_sessions SET status = 'CLOSED', closedAt = NOW() WHERE id = :sessionId`,
+        { sessionId: order.sessionId }
+      );
+    }
+
     await conn.commit();
     return { order: await getOrderById(orderId) };
   } catch (err) {

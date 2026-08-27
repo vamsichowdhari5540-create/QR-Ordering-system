@@ -241,7 +241,7 @@ async function closeSession(req, res) {
 
 // Day book for the owner: the day's takings plus every table visit behind them.
 async function getDayHistory(req, res) {
-  const date = req.query.date || ledgerModel.dateStr();
+  const date = req.query.date || null;
   const [summary, orders] = await Promise.all([
     ledgerModel.getDaySummary(date),
     ledgerModel.getDayOrders(date),
@@ -277,7 +277,7 @@ async function getDayHistory(req, res) {
 
   res.json({
     success: true,
-    date,
+    date: summary.date,
     summary,
     cancelledCount: orders.filter((o) => o.status === 'CANCELLED').length,
     visits: [...visits.values()],
@@ -286,16 +286,16 @@ async function getDayHistory(req, res) {
 
 // Same day book, as a downloadable PDF statement.
 async function exportDayStatement(req, res) {
-  const date = req.query.date || ledgerModel.dateStr();
+  const date = req.query.date || null;
   const [summary, orders] = await Promise.all([
     ledgerModel.getDaySummary(date),
     ledgerModel.getDayOrders(date),
   ]);
 
-  const doc = buildDayStatement({ date, summary, orders });
+  const doc = buildDayStatement({ date: summary.date, summary, orders });
 
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="food-politics-statement-${date}.pdf"`);
+  res.setHeader('Content-Disposition', `attachment; filename="food-politics-statement-${summary.date}.pdf"`);
   doc.pipe(res);
   doc.end();
 }
