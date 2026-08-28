@@ -63,6 +63,8 @@ async function seedKitchen() {
 // Obvious card typos are corrected (Manchuriya -> Manchurian, Statars ->
 // Starters, Curruy -> Curry, etc.); prices follow the card exactly, including
 // handwritten corrections (Shahi Paneer, Mutton Semi Fry, Mutton Mughlai Curry).
+// Ordered as a diner reads a menu: starters (veg before non-veg) first,
+// then tandoori, then gravies, then rice courses, then bread/sides/dessert.
 const MENU = [
   {
     category: 'Veg Starters',
@@ -72,44 +74,6 @@ const MENU = [
       ['Dragon Paneer', 240], ['Paneer Chilli', 250], ['Paneer 65', 220], ['Paneer Manchurian', 220],
       ['Crispy Corn', 240], ['Baby Corn Majestic', 210], ['Paneer Majestic', 240],
       ['Paneer Roast', 240], ['Kaju Roast', 240], ['Kaju Pakoda', 250],
-    ],
-  },
-  {
-    category: 'Egg Starters',
-    items: [
-      ['Omelette', 90], ['Masala Omelette', 100], ['Egg Cheese Omelette', 120],
-      ['Egg Kheema Curry', 160], ['Fried Egg Masala', 170], ['Egg Burji', 110],
-      ['Egg Roast', 150], ['Boiled Egg Fry', 150], ['Egg Chilli', 160],
-    ],
-  },
-  {
-    category: 'Veg Gravies',
-    items: [
-      ['Plain Palak', 140], ['Tomato Curry', 140], ['Dal Tomato', 145], ['Dal Curry', 145],
-      ['Green Peas Curry', 140], ['Chana Curry', 160], ['Dal Tadka', 160], ['Gobi Curry', 160],
-      ['Palak Paneer', 210], ['Gobi Kaju', 210], ['Mushroom Curry', 220], ['Shahi Paneer', 250],
-      ['Methi Chaman', 230], ['Kaju Tomato', 240], ['Kadai Paneer', 240], ['Kaju Curry', 240],
-      ['Kaju Paneer', 240], ['Kaju Mushroom', 250], ['Kaju Capsicum', 250], ['Kadai Mushroom', 260],
-    ],
-  },
-  {
-    category: 'Mutton Items',
-    items: [
-      ['Mutton Roast', 380], ['Pepper Mutton', 390], ['Mutton Semi Fry', 360],
-      ['Mutton Mughlai Curry', 360], ['Mutton Curry', 320], ['Gongura Mutton Vepudu', 400],
-      ['Gongura Mutton Curry', 420],
-    ],
-  },
-  {
-    category: 'Non-Veg Gravies',
-    items: [
-      ['Legpiece Curry (1 Piece)', 160], ['Bone Curry', 260], ['Chicken Boneless Curry', 270],
-      ['Chicken Bone Mughlai', 300], ['Chicken Boneless Mughlai', 300], ['Andhra Chicken', 300],
-      ['Butter Chicken', 300], ['Hyderabad Chicken', 300], ['Kadai Chicken', 300],
-      ['Punjabi Chicken', 300], ['Ramba Chicken', 300], ['Nellore Chicken', 420],
-      ['Maharani Chicken', 300], ['Kaju Chicken Curry', 300], ['Lollypop Curry', 300],
-      ['Kashmiri Chicken', 300], ["Food Politics Spcl Chicken Curry", 420], ['Prawns Curry', 330],
-      ['Chicken Kolhapuri', 300], ['Home Style Chicken Curry', 270], ['Home Style Mutton Curry', 320],
     ],
   },
   {
@@ -127,13 +91,11 @@ const MENU = [
     ],
   },
   {
-    category: 'Non-Veg Tandoori',
+    category: 'Egg Starters',
     items: [
-      ['Tandoori Chicken Full', 650], ['Tandoori Chicken Half', 320], ['Chicken Tikka', 410],
-      ['Chicken Achari Tikka', 340], ['Chicken Malai Tikka', 370], ['Murg Malai Tikka', 370],
-      ['Tangdi Kebab Full', 410], ['Tangdi Kebab Half', 220], ['Reshmi Kebab', 340],
-      ['Angara Kebab', 370], ['Cheese Chicken Tikka', 320], ['Prawns Tikka', 320],
-      ['Chicken Seekh Kebab', 350],
+      ['Omelette', 90], ['Masala Omelette', 100], ['Egg Cheese Omelette', 120],
+      ['Egg Kheema Curry', 160], ['Fried Egg Masala', 170], ['Egg Burji', 110],
+      ['Egg Roast', 150], ['Boiled Egg Fry', 150], ['Egg Chilli', 160],
     ],
   },
   {
@@ -145,11 +107,43 @@ const MENU = [
     ],
   },
   {
-    category: 'Biryani (Non-Veg)',
+    category: 'Non-Veg Tandoori',
     items: [
-      ['Egg Biryani', 210], ['Chicken Dum Biryani', 250], ['Chicken Fry Piece Biryani', 290],
-      ['Chicken Spl Biryani (Boneless)', 300], ['Mutton Fry Piece Biryani', 370],
-      ['Prawns Fry Biryani', 320], ['Plain Biryani (Non-Veg)', 170], ['White Rice Bowl', 70],
+      ['Tandoori Chicken Full', 650], ['Tandoori Chicken Half', 320], ['Chicken Tikka', 410],
+      ['Chicken Achari Tikka', 340], ['Chicken Malai Tikka', 370], ['Murg Malai Tikka', 370],
+      ['Tangdi Kebab Full', 410], ['Tangdi Kebab Half', 220], ['Reshmi Kebab', 340],
+      ['Angara Kebab', 370], ['Cheese Chicken Tikka', 320], ['Prawns Tikka', 320],
+      ['Chicken Seekh Kebab', 350],
+    ],
+  },
+  {
+    category: 'Veg Gravies',
+    items: [
+      ['Plain Palak', 140], ['Tomato Curry', 140], ['Dal Tomato', 145], ['Dal Curry', 145],
+      ['Green Peas Curry', 140], ['Chana Curry', 160], ['Dal Tadka', 160], ['Gobi Curry', 160],
+      ['Palak Paneer', 210], ['Gobi Kaju', 210], ['Mushroom Curry', 220], ['Shahi Paneer', 250],
+      ['Methi Chaman', 230], ['Kaju Tomato', 240], ['Kadai Paneer', 240], ['Kaju Curry', 240],
+      ['Kaju Paneer', 240], ['Kaju Mushroom', 250], ['Kaju Capsicum', 250], ['Kadai Mushroom', 260],
+    ],
+  },
+  {
+    category: 'Non-Veg Gravies',
+    items: [
+      ['Legpiece Curry (1 Piece)', 160], ['Bone Curry', 260], ['Chicken Boneless Curry', 270],
+      ['Chicken Bone Mughlai', 300], ['Chicken Boneless Mughlai', 300], ['Andhra Chicken', 300],
+      ['Butter Chicken', 300], ['Hyderabad Chicken', 300], ['Kadai Chicken', 300],
+      ['Punjabi Chicken', 300], ['Ramba Chicken', 300], ['Nellore Chicken', 420],
+      ['Maharani Chicken', 300], ['Kaju Chicken Curry', 300], ['Lollypop Curry', 300],
+      ['Kashmiri Chicken', 300], ["Food Politics Spcl Chicken Curry", 420], ['Prawns Curry', 330],
+      ['Chicken Kolhapuri', 300], ['Home Style Chicken Curry', 270], ['Home Style Mutton Curry', 320],
+    ],
+  },
+  {
+    category: 'Mutton Items',
+    items: [
+      ['Mutton Roast', 380], ['Pepper Mutton', 390], ['Mutton Semi Fry', 360],
+      ['Mutton Mughlai Curry', 360], ['Mutton Curry', 320], ['Gongura Mutton Vepudu', 400],
+      ['Gongura Mutton Curry', 420],
     ],
   },
   {
@@ -157,6 +151,14 @@ const MENU = [
     items: [
       ['Veg Biryani', 210], ['Paneer Biryani', 240], ['Spcl Paneer Biryani', 270],
       ['Mushroom Biryani', 260], ['Cashew Biryani', 270], ['Jain Biryani Rice', 170],
+    ],
+  },
+  {
+    category: 'Biryani (Non-Veg)',
+    items: [
+      ['Egg Biryani', 210], ['Chicken Dum Biryani', 250], ['Chicken Fry Piece Biryani', 290],
+      ['Chicken Spl Biryani (Boneless)', 300], ['Mutton Fry Piece Biryani', 370],
+      ['Prawns Fry Biryani', 320], ['Plain Biryani (Non-Veg)', 170], ['White Rice Bowl', 70],
     ],
   },
   {
@@ -174,6 +176,7 @@ const MENU = [
       ['Schezwan Chicken Fried Rice', 240], ['Prawns Fried Rice', 280], ['Mixed Fried Rice', 280],
     ],
   },
+  { category: 'South Indian', items: [['Curd Rice', 100], ['Curd', 30]] },
   {
     category: 'Bread Items',
     items: [
@@ -182,7 +185,6 @@ const MENU = [
     ],
   },
   { category: 'Desserts', items: [['Kheer', 120]] },
-  { category: 'South Indian', items: [['Curd Rice', 100], ['Curd', 30]] },
 ];
 
 async function seedMenu() {
