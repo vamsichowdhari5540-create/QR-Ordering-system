@@ -26,4 +26,15 @@ const callServerLimiter = rateLimit({
   message: { success: false, error: 'Already called — the server has been notified' },
 });
 
-module.exports = { loginLimiter, orderCreateLimiter, callServerLimiter };
+// The order-status page polls this every 4s while open (~75 req/5min for one
+// genuine customer) — generous headroom above that, since the access token
+// is the real defense here; this just blocks a fast enumeration/brute-force sweep.
+const orderLookupLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, slow down' },
+});
+
+module.exports = { loginLimiter, orderCreateLimiter, callServerLimiter, orderLookupLimiter };

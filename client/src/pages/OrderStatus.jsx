@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Spinner from '../components/Spinner.jsx';
 
@@ -15,14 +15,20 @@ const STATUS_COPY = {
 
 export default function OrderStatus() {
   const { orderId } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('t');
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!token) {
+      setError('This link is missing its access code — order more from the table to get a fresh one.');
+      return;
+    }
     let stop = false;
     async function poll() {
       try {
-        const { order } = await api.getOrder(orderId);
+        const { order } = await api.getOrder(orderId, token);
         if (!stop) setOrder(order);
       } catch (e) {
         if (!stop) setError(e.message);
@@ -34,7 +40,7 @@ export default function OrderStatus() {
       stop = true;
       clearInterval(id);
     };
-  }, [orderId]);
+  }, [orderId, token]);
 
   if (error) return <div className="status-page center-note">{error}</div>;
   if (!order)

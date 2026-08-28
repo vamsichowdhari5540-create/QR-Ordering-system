@@ -16,8 +16,11 @@ async function createOrder(req, res) {
   }
 }
 
+// Public — no login. The token (issued at creation, never derivable from the
+// order id) is what proves this caller placed the order, since order ids are
+// small and sequential enough to guess or enumerate outright.
 async function getOrderStatus(req, res) {
-  const order = await orderModel.getOrderById(req.params.orderId);
+  const order = await orderModel.getOrderByIdForCustomer(req.params.orderId, req.query.token);
   if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
   res.json({ success: true, order });
 }

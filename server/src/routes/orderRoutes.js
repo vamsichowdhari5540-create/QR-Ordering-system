@@ -1,8 +1,8 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const orderController = require('../controllers/orderController');
 const { validate } = require('../middleware/validate');
-const { orderCreateLimiter } = require('../middleware/rateLimit');
+const { orderCreateLimiter, orderLookupLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -26,7 +26,11 @@ router.post(
 
 router.get(
   '/:orderId',
-  [param('orderId').isString().trim().notEmpty()],
+  orderLookupLimiter,
+  [
+    param('orderId').isString().trim().notEmpty(),
+    query('token').isString().trim().isLength({ min: 32, max: 64 }),
+  ],
   validate,
   orderController.getOrderStatus
 );

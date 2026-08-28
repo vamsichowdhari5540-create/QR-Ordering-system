@@ -62,20 +62,31 @@ async function addToSessionTotals(sessionId, { amount, tax }, conn = pool) {
   );
 }
 
-async function getOrdersForSession(sessionId) {
-  const [rows] = await pool.query(
+async function getOrdersForSession(sessionId, conn = pool) {
+  const [rows] = await conn.query(
     'SELECT * FROM orders WHERE sessionId = :sessionId ORDER BY createdAt',
     { sessionId }
   );
   return rows;
 }
 
-async function closeSession(sessionId, notes) {
-  await pool.query(
+// Locks the session row so settle/close can't race with itself — two
+// near-simultaneous taps (two staff members, or a double-tap) on the same
+// table would otherwise both pass the "anything still unpaid?" check before
+// either write lands, generating a duplicate final-bill print job.
+async function lockSessionForUpdate(sessionId, conn) {
+  const [rows] = await conn.query('SELECT * FROM table_sessions WHERE id = :sessionId FOR UPDATE', {
+    sessionId,
+  });
+  return rows[0] || null;
+}
+
+async function closeSession(sessionId, notes, conn = pool) {
+  await conn.query(
     `UPDATE table_sessions SET status = 'CLOSED', closedAt = NOW(), notes = :notes WHERE id = :sessionId`,
     { sessionId, notes: notes || null }
   );
-  return getSessionById(sessionId);
+  return getSessionById(sessionId, conn);
 }
 
 async function getActiveSessions() {
@@ -114,4 +125,5 @@ module.exports = {
   getActiveSessions,
   requestServerCall,
   acknowledgeServerCall,
+  lockSessionForUpdate,
 };

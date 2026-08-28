@@ -22,6 +22,17 @@ async function getFullMenu(req, res) {
   res.json({ success: true, categories });
 }
 
+// Order detail for the ledger panels (owner + floor server). Deliberately
+// separate from the public, token-gated GET /api/orders/:orderId — staff
+// access is proven by their JWT, not by knowing a per-order secret, and
+// conflating the two would mean either weakening the customer-facing check
+// or making the dashboards carry tokens around for no reason.
+async function getOrderDetail(req, res) {
+  const order = await orderModel.getOrderById(req.params.orderId);
+  if (!order) return res.status(404).json({ success: false, error: 'Order not found' });
+  res.json({ success: true, order });
+}
+
 async function getDashboard(req, res) {
   const isOwner = req.admin.role === 'OWNER';
 
@@ -128,56 +139,80 @@ async function settleGuest(req, res) {
   const { sessionId } = req.params;
   const customerId = Number(req.body.customerId);
 
-  const session = await sessionModel.getSessionById(sessionId);
-  if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
-  if (session.status !== 'OPEN') {
-    return res.status(400).json({ success: false, error: 'This table has already been cleared' });
-  }
+  // Locks the session row for the whole check-then-write sequence below, so
+  // two near-simultaneous settle taps on the same guest (two staff, or a
+  // double-tap) can't both pass the "anything still unpaid?" check before
+  // either write lands — the second one blocks here until the first commits,
+  // then re-reads and correctly sees nothing left to settle.
+  const conn = await pool.getConnection();
+  let session, sessionOrders, guestOrders, displayName, tableClosed;
+  try {
+    await conn.beginTransaction();
 
-  // Identity is the customer record (keyed on mobile number), not the typed name —
-  // two different guests can type the same name, and the same guest re-ordering
-  // should land back on their own running bill regardless of how they spell it this time.
-  const sessionOrders = await sessionModel.getOrdersForSession(sessionId);
-  const guestOrders = sessionOrders.filter(
-    (o) => o.customerId === customerId && o.status !== 'CANCELLED' && !o.paidAt
-  );
+    session = await sessionModel.lockSessionForUpdate(sessionId, conn);
+    if (!session) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    if (session.status !== 'OPEN') {
+      await conn.rollback();
+      return res.status(400).json({ success: false, error: 'This table has already been cleared' });
+    }
 
-  if (guestOrders.length === 0) {
-    return res.status(400).json({ success: false, error: 'No unpaid orders found for that guest' });
-  }
+    // Identity is the customer record (keyed on mobile number), not the typed name —
+    // two different guests can type the same name, and the same guest re-ordering
+    // should land back on their own running bill regardless of how they spell it this time.
+    sessionOrders = await sessionModel.getOrdersForSession(sessionId, conn);
+    guestOrders = sessionOrders.filter(
+      (o) => o.customerId === customerId && o.status !== 'CANCELLED' && !o.paidAt
+    );
 
-  // Oldest order's name is what the bill and error messages show — matches how
-  // the ledger displays the group, so it doesn't shift if they re-typed their
-  // name slightly differently on a later round.
-  const displayName = guestOrders[0].customerName;
+    if (guestOrders.length === 0) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, error: 'No unpaid orders found for that guest' });
+    }
 
-  const unserved = guestOrders.filter((o) => o.status === 'CONFIRMED' || o.status === 'READY');
-  if (unserved.length > 0) {
-    return res.status(400).json({
-      success: false,
-      error: `${unserved.length} order(s) for ${displayName} still need to be served before settling: ${unserved.map((o) => o.id).join(', ')}`,
+    // Oldest order's name is what the bill and error messages show — matches how
+    // the ledger displays the group, so it doesn't shift if they re-typed their
+    // name slightly differently on a later round.
+    displayName = guestOrders[0].customerName;
+
+    const unserved = guestOrders.filter((o) => o.status === 'CONFIRMED' || o.status === 'READY');
+    if (unserved.length > 0) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        error: `${unserved.length} order(s) for ${displayName} still need to be served before settling: ${unserved.map((o) => o.id).join(', ')}`,
+      });
+    }
+
+    await conn.query(`UPDATE orders SET paidAt = NOW() WHERE id IN (:ids)`, {
+      ids: guestOrders.map((o) => o.id),
     });
+
+    // Anyone at the table besides this guest, still unpaid and not cancelled?
+    const settledIds = new Set(guestOrders.map((o) => o.id));
+    const stillOwing = sessionOrders.some(
+      (o) => !settledIds.has(o.id) && o.status !== 'CANCELLED' && !o.paidAt
+    );
+
+    tableClosed = false;
+    if (!stillOwing) {
+      session = await sessionModel.closeSession(sessionId, null, conn);
+      tableClosed = true;
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
 
   const fullOrders = await Promise.all(guestOrders.map((o) => orderModel.getOrderById(o.id)));
   const printJob = await printFinalBill(session, fullOrders);
-
-  await pool.query(`UPDATE orders SET paidAt = NOW() WHERE id IN (:ids)`, {
-    ids: guestOrders.map((o) => o.id),
-  });
-
-  // Anyone at the table besides this guest, still unpaid and not cancelled?
-  const settledIds = new Set(guestOrders.map((o) => o.id));
-  const stillOwing = sessionOrders.some(
-    (o) => !settledIds.has(o.id) && o.status !== 'CANCELLED' && !o.paidAt
-  );
-
-  let tableClosed = false;
-  if (!stillOwing) {
-    const closed = await sessionModel.closeSession(sessionId, null);
-    emitSessionClosed(closed);
-    tableClosed = true;
-  }
+  if (tableClosed) emitSessionClosed(session);
 
   res.json({
     success: true,
@@ -196,35 +231,58 @@ async function closeSession(req, res) {
   const { sessionId } = req.params;
   const { notes } = req.body;
 
-  const session = await sessionModel.getSessionById(sessionId);
-  if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
+  // Same lock-then-recheck as settleGuest — otherwise two near-simultaneous
+  // close taps on the same table both pass the "anything unserved?" check
+  // and each generates its own final-bill print job.
+  const conn = await pool.getConnection();
+  let session, billableOrders;
+  try {
+    await conn.beginTransaction();
 
-  const sessionOrders = await sessionModel.getOrdersForSession(sessionId);
-  const unserved = sessionOrders.filter((o) => o.status === 'CONFIRMED' || o.status === 'READY');
-  if (unserved.length > 0) {
-    return res.status(400).json({
-      success: false,
-      error: `${unserved.length} order(s) still need to be served before this table can be settled: ${unserved.map((o) => o.id).join(', ')}`,
-    });
+    session = await sessionModel.lockSessionForUpdate(sessionId, conn);
+    if (!session) {
+      await conn.rollback();
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    if (session.status !== 'OPEN') {
+      await conn.rollback();
+      return res.status(400).json({ success: false, error: 'This table has already been cleared' });
+    }
+
+    const sessionOrders = await sessionModel.getOrdersForSession(sessionId, conn);
+    const unserved = sessionOrders.filter((o) => o.status === 'CONFIRMED' || o.status === 'READY');
+    if (unserved.length > 0) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        error: `${unserved.length} order(s) still need to be served before this table can be settled: ${unserved.map((o) => o.id).join(', ')}`,
+      });
+    }
+
+    // Cancelled orders were already unwound from the session total — keep them off the bill.
+    billableOrders = sessionOrders.filter((o) => o.status !== 'CANCELLED');
+
+    if (billableOrders.length > 0) {
+      await conn.query(`UPDATE orders SET paidAt = NOW() WHERE id IN (:ids) AND paidAt IS NULL`, {
+        ids: billableOrders.map((o) => o.id),
+      });
+    }
+
+    session = await sessionModel.closeSession(sessionId, notes, conn);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
 
-  // Cancelled orders were already unwound from the session total — keep them off the bill.
-  const billableOrders = sessionOrders.filter((o) => o.status !== 'CANCELLED');
   const fullOrders = await Promise.all(billableOrders.map((o) => orderModel.getOrderById(o.id)));
-
   let printJob = null;
   if (fullOrders.length > 0) {
     printJob = await printFinalBill(session, fullOrders);
   }
-
-  if (billableOrders.length > 0) {
-    await pool.query(`UPDATE orders SET paidAt = NOW() WHERE id IN (:ids) AND paidAt IS NULL`, {
-      ids: billableOrders.map((o) => o.id),
-    });
-  }
-
-  const closed = await sessionModel.closeSession(sessionId, notes);
-  emitSessionClosed(closed);
+  emitSessionClosed(session);
 
   res.json({
     success: true,
@@ -369,6 +427,7 @@ async function completePrintJob(req, res) {
 
 module.exports = {
   getFullMenu,
+  getOrderDetail,
   getDashboard,
   createCategory,
   updateCategory,

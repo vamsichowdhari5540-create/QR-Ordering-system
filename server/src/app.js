@@ -16,9 +16,14 @@ const app = express();
 app.set('trust proxy', 1);
 
 // HTTPS enforcement (Railway/Render sit behind a proxy that sets this header).
+// The redirect target is Render's own platform-provided hostname, not the
+// client-supplied Host header — blindly reflecting an attacker-chosen Host
+// back into a redirect is a classic open-redirect/host-header-injection
+// pattern, and there's a trustworthy value sitting right here instead.
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production' && req.header('x-forwarded-proto') !== 'https') {
-    return res.redirect(`https://${req.header('host')}${req.url}`);
+    const host = process.env.RENDER_EXTERNAL_HOSTNAME || req.header('host');
+    return res.redirect(`https://${host}${req.url}`);
   }
   next();
 });

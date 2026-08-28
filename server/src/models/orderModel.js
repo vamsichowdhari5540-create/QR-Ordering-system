@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const pool = require('../config/db');
 const { nextOrderId } = require('../utils/ids');
 const { calculateGst, round2 } = require('../utils/gst');
@@ -72,15 +73,20 @@ async function createOrder({ tableId, customer, items }) {
 
     const customerId = await findOrCreateCustomer(conn, customer);
     const orderId = await nextOrderId(conn);
+    // Order ids are sequential and meant to be — they're printed on receipts
+    // and read aloud at pickup. This is the actual secret the public order-
+    // status page checks, so it must be unguessable and never derived from
+    // anything predictable (order id, table, timestamp).
+    const accessToken = crypto.randomBytes(24).toString('hex');
 
     // Every order is cash, collected by the cashier at the counter — confirmed immediately.
     await conn.query(
       `INSERT INTO orders
         (id, sessionId, tableId, customerId, customerName, status,
-         subtotal, cgstAmount, sgstAmount, taxTotal, grandTotal)
+         subtotal, cgstAmount, sgstAmount, taxTotal, grandTotal, accessToken)
        VALUES
         (:orderId, :sessionId, :tableId, :customerId, :customerName, 'CONFIRMED',
-         :subtotal, :cgstAmount, :sgstAmount, :taxTotal, :grandTotal)`,
+         :subtotal, :cgstAmount, :sgstAmount, :taxTotal, :grandTotal, :accessToken)`,
       {
         orderId,
         sessionId: session.id,
@@ -92,6 +98,7 @@ async function createOrder({ tableId, customer, items }) {
         sgstAmount,
         taxTotal,
         grandTotal,
+        accessToken,
       }
     );
 
@@ -142,6 +149,21 @@ async function getOrderById(orderId) {
           : item.selectedModifiers || [],
     })),
   };
+}
+
+// Public order-status page: the caller must present the token issued when
+// this order was created. Same lookup either way (valid id + wrong/missing
+// token vs. no such id) so a guess can't be told apart from a real order it
+// doesn't own — that distinction is exactly what would make ids guessable.
+async function getOrderByIdForCustomer(orderId, token) {
+  if (!token || typeof token !== 'string') return null;
+  const order = await getOrderById(orderId);
+  if (!order || !order.accessToken) return null;
+
+  const a = Buffer.from(order.accessToken);
+  const b = Buffer.from(token);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  return order;
 }
 
 async function markKotPrinted(orderId) {
@@ -242,6 +264,7 @@ module.exports = {
   OrderValidationError,
   createOrder,
   getOrderById,
+  getOrderByIdForCustomer,
   markKotPrinted,
   markReceiptPrinted,
   completeOrder,

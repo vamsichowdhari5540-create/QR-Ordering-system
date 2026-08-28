@@ -86,7 +86,7 @@ function LedgerPanel({ session, token, onClose, onChanged }) {
   const load = useCallback(async () => {
     try {
       const { orders: sessionOrders } = await api.getSession(session.id);
-      const full = await Promise.all(sessionOrders.map((o) => api.getOrder(o.id)));
+      const full = await Promise.all(sessionOrders.map((o) => api.getOrderDetail(token, o.id)));
       // Cancelled orders are off the bill — they must not reach the ledger or its totals.
       setOrders(full.map((r) => r.order).filter((o) => o.status !== 'CANCELLED'));
     } catch (e) {

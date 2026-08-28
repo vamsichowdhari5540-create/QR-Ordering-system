@@ -100,7 +100,7 @@ function ServePanel({ session, token, onClose, onChanged }) {
   const load = useCallback(async () => {
     try {
       const { orders: sessionOrders } = await api.getSession(session.id);
-      const full = await Promise.all(sessionOrders.map((o) => api.getOrder(o.id)));
+      const full = await Promise.all(sessionOrders.map((o) => api.getOrderDetail(token, o.id)));
       setOrders(full.map((r) => r.order));
       setError('');
     } catch (e) {

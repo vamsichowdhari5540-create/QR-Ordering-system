@@ -163,8 +163,14 @@ CREATE TABLE IF NOT EXISTS orders (
   "completedAt" TIMESTAMPTZ NULL,
   -- Set when this order's guest is billed. Lets one table hold several
   -- independent parties, each settled on their own without closing the table.
-  "paidAt" TIMESTAMPTZ NULL
+  "paidAt" TIMESTAMPTZ NULL,
+  -- Proves the caller is the guest who placed this order, not just someone
+  -- who guessed the ID. Order ids are sequential (ORD-DDMM-NNN) and meant to
+  -- be — they're printed on receipts and read aloud at pickup — so they
+  -- can't double as the secret the public status page relies on.
+  "accessToken" VARCHAR(64) NULL
 );
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS "accessToken" VARCHAR(64) NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_table_status ON orders ("tableId", status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders ("createdAt");
 

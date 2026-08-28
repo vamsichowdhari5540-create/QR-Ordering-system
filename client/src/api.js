@@ -17,7 +17,12 @@ async function request(path, options = {}) {
 export const api = {
   getCustomerMenu: () => request('/api/menu/full'),
   createOrder: (body) => request('/api/orders', { method: 'POST', body: JSON.stringify(body) }),
-  getOrder: (orderId) => request(`/api/orders/${orderId}`),
+  // Public order-status page — the token proves this browser placed the
+  // order, since order ids are sequential and guessable on their own.
+  getOrder: (orderId, token) => request(`/api/orders/${orderId}?token=${encodeURIComponent(token)}`),
+  // Staff ledger views — proven by the admin JWT instead, not the token above.
+  getOrderDetail: (token, orderId) =>
+    request(`/api/admin/orders/${orderId}`, { headers: authHeader(token) }),
   getSession: (sessionId) => request(`/api/sessions/${sessionId}`),
   callServer: (tableId) => request(`/api/sessions/table/${tableId}/call-server`, { method: 'POST' }),
 

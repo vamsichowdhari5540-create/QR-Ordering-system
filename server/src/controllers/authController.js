@@ -1,4 +1,7 @@
-const bcrypt = require('bcrypt');
+// Pure-JS bcrypt — no native compilation step, and avoids bcrypt's own
+// node-pre-gyp -> tar dependency chain (a critical path-traversal CVE with no
+// available fix at the pinned version).
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const adminModel = require('../models/adminModel');
 

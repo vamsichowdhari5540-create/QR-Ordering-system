@@ -169,7 +169,7 @@ function CartSheet({ cart, setCart, tableId, onClose, onOrderPlaced }) {
         })),
       };
       const { order } = await api.createOrder(body);
-      onOrderPlaced(order.id);
+      onOrderPlaced(order.id, order.accessToken);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -489,7 +489,9 @@ export default function Menu() {
           setCart={setCart}
           tableId={tableId}
           onClose={() => setCartOpen(false)}
-          onOrderPlaced={(orderId) => navigate(`/order/${orderId}`)}
+          onOrderPlaced={(orderId, accessToken) =>
+            navigate(`/order/${orderId}?t=${encodeURIComponent(accessToken)}`)
+          }
         />
       )}
     </div>

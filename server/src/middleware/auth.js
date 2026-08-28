@@ -9,9 +9,11 @@ function adminAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // Tokens issued before roles existed have no role claim — treat them as OWNER.
-    req.admin = { id: payload.sub, email: payload.email, role: payload.role || 'OWNER' };
+    // Every token this app issues carries an explicit role (see authController).
+    // No fallback here on purpose: a token somehow missing one should get zero
+    // access, not silently upgrade to OWNER — the highest-privilege role.
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    req.admin = { id: payload.sub, email: payload.email, role: payload.role || null };
     next();
   } catch (err) {
     return res.status(401).json({ success: false, error: 'Invalid or expired token' });
@@ -30,7 +32,7 @@ function requireRole(...roles) {
 
 // Used by the /admin Socket.IO namespace handshake — same JWT, different transport.
 function verifySocketToken(token) {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  return jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 }
 
 module.exports = { adminAuth, requireRole, verifySocketToken };

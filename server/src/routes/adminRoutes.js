@@ -13,6 +13,14 @@ const ownerOnly = requireRole('OWNER');
 router.get('/dashboard', adminController.getDashboard);
 router.get('/menu', ownerOnly, adminController.getFullMenu);
 
+// Order detail for the ledger panels — OWNER and SERVER both work the floor.
+router.get(
+  '/orders/:orderId',
+  [param('orderId').isString().trim().notEmpty()],
+  validate,
+  adminController.getOrderDetail
+);
+
 router.post(
   '/categories',
   ownerOnly,
