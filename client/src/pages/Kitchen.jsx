@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Spinner from '../components/Spinner.jsx';
 import { useInstallPrompt } from '../useInstallPrompt.js';
+import { useBackGuard } from '../hooks/useBackGuard.js';
 
 function elapsedMinutes(createdAt) {
   return Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
@@ -69,6 +70,12 @@ export default function Kitchen() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const { canInstall, promptInstall } = useInstallPrompt();
+
+  const noOverlayRef = useRef(false);
+  const { showExitWarning } = useBackGuard({
+    isOverlayOpenRef: noOverlayRef,
+    closeOverlay: () => {},
+  });
 
   const load = useCallback(async () => {
     try {
@@ -157,6 +164,8 @@ export default function Kitchen() {
           ))}
         </div>
       )}
+
+      {showExitWarning && <div className="exit-toast">Press back again to exit</div>}
     </div>
   );
 }

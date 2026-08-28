@@ -18,7 +18,9 @@ export default function AdminLogin() {
       const { token, admin } = await api.adminLogin(email.trim(), password);
       localStorage.setItem('fp_admin_token', token);
       localStorage.setItem('fp_admin_role', admin.role);
-      navigate(roleHome(admin.role));
+      // replace, not push — otherwise the login screen sits in history
+      // right behind the dashboard, and a single back press reopens it.
+      navigate(roleHome(admin.role), { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {

@@ -617,6 +617,21 @@ input:focus {
   animation: popIn 0.2s var(--ease);
 }
 
+.exit-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.75rem;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  z-index: 50;
+  animation: popIn 0.2s var(--ease);
+}
+
 /* ---------- order status ---------- */
 
 .status-page {

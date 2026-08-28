@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import Spinner from '../components/Spinner.jsx';
 import { roleHome } from '../roleHome.js';
 import { useInstallPrompt } from '../useInstallPrompt.js';
+import { useBackGuard } from '../hooks/useBackGuard.js';
 
 function money(n) {
   return `₹${Number(n).toFixed(2)}`;
@@ -331,6 +332,13 @@ export default function ServerDashboard() {
   const [openSession, setOpenSession] = useState(null);
   const { canInstall, promptInstall } = useInstallPrompt();
 
+  const openSessionRef = useRef(null);
+  openSessionRef.current = openSession;
+  const { showExitWarning } = useBackGuard({
+    isOverlayOpenRef: openSessionRef,
+    closeOverlay: () => setOpenSession(null),
+  });
+
   const load = useCallback(async () => {
     try {
       const dash = await api.adminDashboard(token);
@@ -464,6 +472,8 @@ export default function ServerDashboard() {
           onChanged={load}
         />
       )}
+
+      {showExitWarning && <div className="exit-toast">Press back again to exit</div>}
     </div>
   );
 }
