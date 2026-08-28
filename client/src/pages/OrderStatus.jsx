@@ -31,7 +31,12 @@ export default function OrderStatus() {
         const { order } = await api.getOrder(orderId, token);
         if (!stop) setOrder(order);
       } catch (e) {
-        if (!stop) setError(e.message);
+        // A malformed or mismatched token surfaces as a raw "Request failed
+        // (400/404)" from the API — a diner doesn't need to know that, and
+        // it reads as broken. Same recovery either way: get a fresh link.
+        if (!stop) {
+          setError("We couldn't find that order — the link may be incomplete. Order more from the table to get a fresh one.");
+        }
       }
     }
     poll();
