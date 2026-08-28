@@ -415,7 +415,7 @@ export default function AdminDashboard() {
           <Link to="/admin/menu" className="topbar-link">
             Today's menu
           </Link>
-          <Link to="/kitchen" className="topbar-link">
+          <Link to="/kitchen" state={{ fromAdmin: true }} className="topbar-link">
             Kitchen display
           </Link>
           <button className="topbar-link signout" onClick={logout}>

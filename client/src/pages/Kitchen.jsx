@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api.js';
 import Spinner from '../components/Spinner.jsx';
 import { useInstallPrompt } from '../useInstallPrompt.js';
@@ -65,16 +65,22 @@ function OrderTicket({ order, onReady, busy }) {
 
 export default function Kitchen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [token] = useState(() => localStorage.getItem('fp_admin_token'));
   const [orders, setOrders] = useState(null);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const { canInstall, promptInstall } = useInstallPrompt();
 
+  // Reached via the owner's "Kitchen display" link — a back target already
+  // exists (the dashboard that linked here), so back should navigate there
+  // normally, not treat this screen as the app's root.
+  const isLinkedFromDashboard = location.state?.fromAdmin === true;
   const noOverlayRef = useRef(false);
   const { showExitWarning } = useBackGuard({
     isOverlayOpenRef: noOverlayRef,
     closeOverlay: () => {},
+    enableExitGuard: !isLinkedFromDashboard,
   });
 
   const load = useCallback(async () => {

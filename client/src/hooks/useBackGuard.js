@@ -14,7 +14,15 @@ const EXIT_WINDOW_MS = 2000;
 //
 // `isOverlayOpen` must be a ref (not a plain boolean) so the popstate
 // listener — attached once on mount — always reads the current value.
-export function useBackGuard({ isOverlayOpenRef, closeOverlay }) {
+//
+// `enableExitGuard` must be false for a screen reached by in-app navigation
+// from another staff screen (e.g. the owner's "Kitchen display" link) —
+// otherwise it claims its own history entry on mount same as a root screen
+// would, and a single back press gets swallowed into "press again to exit"
+// instead of returning to the screen that linked here. Only screens with no
+// real back target inside the app (landed on straight from login) should
+// leave this true.
+export function useBackGuard({ isOverlayOpenRef, closeOverlay, enableExitGuard = true }) {
   const armedRef = useRef(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
 
@@ -26,6 +34,8 @@ export function useBackGuard({ isOverlayOpenRef, closeOverlay }) {
   closeOverlayRef.current = closeOverlay;
 
   useEffect(() => {
+    if (!enableExitGuard) return undefined;
+
     // Claim one history entry so the very first back press is always ours
     // to intercept, no matter how this screen was reached.
     window.history.pushState({ fpGuard: true }, '');
@@ -53,7 +63,7 @@ export function useBackGuard({ isOverlayOpenRef, closeOverlay }) {
     window.addEventListener('popstate', handlePop);
     return () => window.removeEventListener('popstate', handlePop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enableExitGuard]);
 
   return { showExitWarning };
 }
