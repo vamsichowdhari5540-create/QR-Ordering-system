@@ -260,6 +260,9 @@ export default function Menu() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
+  const [callState, setCallState] = useState('idle'); // idle | calling | called
+  const [cooldown, setCooldown] = useState(0);
+  const [callError, setCallError] = useState('');
 
   // One fetch for the whole menu — tab switching is then instant (no round
   // trip per tab) and search can look across every category at once.
@@ -273,6 +276,36 @@ export default function Menu() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Cooldown after a successful call — mirrors the server's own rate limit
+  // (3 per 2 min) so the button doesn't invite a spam-tap the API would just
+  // reject anyway, and gives the guest calm, visible confirmation it worked.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => {
+      setCooldown((s) => {
+        if (s <= 1) {
+          setCallState('idle');
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
+
+  async function callServer() {
+    setCallState('calling');
+    setCallError('');
+    try {
+      await api.callServer(tableId);
+      setCallState('called');
+      setCooldown(45);
+    } catch (e) {
+      setCallState('idle');
+      setCallError(e.message);
+    }
+  }
 
   const query = search.trim().toLowerCase();
   const items = query
@@ -324,8 +357,24 @@ export default function Menu() {
         <div className="brand">
           Vijay's <span>Food Politics</span>
         </div>
-        <div className="table-tag">Table {tableId}</div>
+        <div className="brand-bar-right">
+          <div className="table-tag">Table {tableId}</div>
+          <button
+            className={`call-server-btn ${callState}`}
+            disabled={callState !== 'idle'}
+            onClick={callServer}
+          >
+            {callState === 'calling' && 'Calling…'}
+            {callState === 'called' && `✓ Server notified (${cooldown}s)`}
+            {callState === 'idle' && '🔔 Call server'}
+          </button>
+        </div>
       </div>
+      {callError && (
+        <div className="error-banner" style={{ margin: '0.6rem 1.25rem 0' }}>
+          {callError}
+        </div>
+      )}
 
       {loading && (
         <div className="center-note">

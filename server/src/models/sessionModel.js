@@ -85,6 +85,24 @@ async function getActiveSessions() {
   return rows;
 }
 
+// A guest tapping "Call server" implies an occupied table — reuses the same
+// lazy session-creation the first order would, so calling before ordering
+// still shows the table as occupied on the floor.
+async function requestServerCall(tableId) {
+  const session = await getOrCreateSessionForTable(tableId);
+  await pool.query('UPDATE table_sessions SET callRequestedAt = NOW() WHERE id = :id', {
+    id: session.id,
+  });
+  return getSessionById(session.id);
+}
+
+async function acknowledgeServerCall(sessionId) {
+  await pool.query('UPDATE table_sessions SET callRequestedAt = NULL WHERE id = :sessionId', {
+    sessionId,
+  });
+  return getSessionById(sessionId);
+}
+
 module.exports = {
   getOpenSessionForTable,
   getOrCreateSessionForTable,
@@ -94,4 +112,6 @@ module.exports = {
   getOrdersForSession,
   closeSession,
   getActiveSessions,
+  requestServerCall,
+  acknowledgeServerCall,
 };

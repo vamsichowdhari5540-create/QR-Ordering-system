@@ -17,6 +17,10 @@ function elapsed(since) {
 }
 
 function tableBadge(orders) {
+  // A session can exist with zero orders — a guest tapped "Call server"
+  // before ordering anything, which lazily opens the table the same way a
+  // first order would.
+  if (orders.length === 0) return { label: 'Needs attention', tone: 'calling' };
   if (orders.some((o) => o.status === 'CONFIRMED')) return { label: 'Preparing', tone: 'preparing' };
   if (orders.some((o) => o.status === 'READY')) return { label: 'Ready to serve', tone: 'ready' };
   return { label: 'Awaiting bill', tone: 'awaiting' };
@@ -26,9 +30,11 @@ function TableCard({ session, orders, onOpen }) {
   const badge = tableBadge(orders);
   const total = Number(session.totalAmount) + Number(session.totalTax);
   const latestGuest = orders[orders.length - 1]?.customerName;
+  const calling = !!session.callRequestedAt;
 
   return (
-    <button className="tcard" onClick={() => onOpen(session)}>
+    <button className={`tcard ${calling ? 'calling' : ''}`} onClick={() => onOpen(session)}>
+      {calling && <span className="tcard-call-dot">🔔 Calling</span>}
       <div className="tcard-head">
         <span className="tcard-num">Table {session.tableId}</span>
         <span className={`tcard-badge ${badge.tone}`}>{badge.label}</span>
@@ -59,6 +65,23 @@ function LedgerPanel({ session, token, onClose, onChanged }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(null);
+  // session is captured once at open time, so this local flag is what
+  // actually hides the banner the moment staff acknowledges — the next poll
+  // (up to 5s later) will confirm it server-side.
+  const [callAcked, setCallAcked] = useState(false);
+
+  async function acknowledgeCall() {
+    setBusy('ack-call');
+    try {
+      await api.acknowledgeCall(token, session.id);
+      setCallAcked(true);
+      onChanged();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -160,6 +183,15 @@ function LedgerPanel({ session, token, onClose, onChanged }) {
             ×
           </button>
         </div>
+
+        {session.callRequestedAt && !callAcked && (
+          <div className="ledger-call-banner">
+            <span>🔔 This table asked for the server</span>
+            <button disabled={busy === 'ack-call'} onClick={acknowledgeCall}>
+              {busy === 'ack-call' ? 'Acknowledging…' : 'Acknowledge'}
+            </button>
+          </div>
+        )}
 
         {error && <div className="error-banner">{error}</div>}
         {!orders && !error && (

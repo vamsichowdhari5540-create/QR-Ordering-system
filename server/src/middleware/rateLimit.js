@@ -16,4 +16,14 @@ const orderCreateLimiter = rateLimit({
   message: { success: false, error: 'Too many orders from this device, slow down' },
 });
 
-module.exports = { loginLimiter, orderCreateLimiter };
+// The client already enforces a cooldown after a successful call — this just
+// stops one phone from flooding the floor with false alarms.
+const callServerLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Already called — the server has been notified' },
+});
+
+module.exports = { loginLimiter, orderCreateLimiter, callServerLimiter };

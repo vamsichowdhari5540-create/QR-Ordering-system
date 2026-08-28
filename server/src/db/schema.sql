@@ -112,8 +112,15 @@ CREATE TABLE IF NOT EXISTS table_sessions (
   "openedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   "closedAt" TIMESTAMPTZ NULL,
   "lastActivityAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  -- Set when the guest taps "Call server"; cleared when staff acknowledges it.
+  -- Lives on the session (not a standalone table) since a call always implies
+  -- an occupied table, and reuses the same row the rest of the table's state lives on.
+  "callRequestedAt" TIMESTAMPTZ NULL,
   notes TEXT
 );
+-- CREATE TABLE IF NOT EXISTS skips column changes on a table that already
+-- exists, so this covers a table_sessions created before this column existed.
+ALTER TABLE table_sessions ADD COLUMN IF NOT EXISTS "callRequestedAt" TIMESTAMPTZ NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_table_status ON table_sessions ("tableId", status);
 CREATE INDEX IF NOT EXISTS idx_sessions_opened_at ON table_sessions ("openedAt");
 DROP TRIGGER IF EXISTS trg_sessions_last_activity ON table_sessions;

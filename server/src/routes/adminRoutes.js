@@ -106,6 +106,15 @@ router.post(
   adminController.settleGuest
 );
 
+// Clears the blinking "call server" indicator once staff has seen it.
+router.post(
+  '/sessions/:sessionId/acknowledge-call',
+  requireRole('OWNER', 'SERVER'),
+  [param('sessionId').isString().trim().notEmpty()],
+  validate,
+  adminController.acknowledgeCall
+);
+
 router.get(
   '/history',
   ownerOnly,

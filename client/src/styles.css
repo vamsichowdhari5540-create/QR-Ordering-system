@@ -101,6 +101,42 @@ code,
   border-radius: 999px;
 }
 
+.brand-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.call-server-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--chili);
+  background: var(--chili-soft);
+  border: 1px solid var(--chili);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s var(--ease), opacity 0.15s var(--ease);
+}
+
+.call-server-btn:active {
+  transform: scale(0.96);
+}
+
+.call-server-btn.calling {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.call-server-btn.called {
+  color: var(--sage);
+  background: var(--sage-soft);
+  border-color: var(--sage);
+  cursor: default;
+}
+
 /* ---------- menu search ---------- */
 
 .menu-search {
@@ -902,6 +938,47 @@ input:focus {
   border-color: var(--rule);
 }
 
+/* A guest tapped "Call server" — same urgency language as ready-to-serve,
+   since both mean "walk to this table now", but calling can co-occur with
+   any other state, so it's a border pulse layered on top rather than a
+   replacement for the status badge. */
+.tcard-badge.calling {
+  color: var(--chili);
+  background: var(--chili-soft);
+  border-color: var(--chili);
+}
+
+.tcard.calling {
+  position: relative;
+  animation: callRing 1.2s ease-in-out infinite;
+}
+
+.tcard-call-dot {
+  position: absolute;
+  top: -0.55rem;
+  right: 0.9rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--chili);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  animation: callFlash 1.2s ease-in-out infinite;
+}
+
+@keyframes callRing {
+  0%, 100% { box-shadow: var(--shadow-xs), 0 0 0 0 rgba(193, 68, 14, 0.5); }
+  50% { box-shadow: var(--shadow-xs), 0 0 0 5px rgba(193, 68, 14, 0); }
+}
+
+@keyframes callFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .tcard.free {
   cursor: default;
   opacity: 0.6;
@@ -1199,6 +1276,39 @@ input:focus {
   font-size: 0.78rem;
   color: var(--ink-faint);
   margin: 0;
+}
+
+.ledger-call-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--chili-soft);
+  border: 1px solid var(--chili);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--chili-dark);
+  animation: popIn 0.2s var(--ease);
+}
+
+.ledger-call-banner button {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--chili);
+  border: none;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ledger-call-banner button:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .ledger-close {

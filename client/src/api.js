@@ -19,6 +19,7 @@ export const api = {
   createOrder: (body) => request('/api/orders', { method: 'POST', body: JSON.stringify(body) }),
   getOrder: (orderId) => request(`/api/orders/${orderId}`),
   getSession: (sessionId) => request(`/api/sessions/${sessionId}`),
+  callServer: (tableId) => request(`/api/sessions/table/${tableId}/call-server`, { method: 'POST' }),
 
   adminLogin: (email, password) =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
@@ -39,6 +40,11 @@ export const api = {
       method: 'POST',
       headers: authHeader(token),
       body: JSON.stringify({ customerId }),
+    }),
+  acknowledgeCall: (token, sessionId) =>
+    request(`/api/admin/sessions/${sessionId}/acknowledge-call`, {
+      method: 'POST',
+      headers: authHeader(token),
     }),
   completePrintJob: (token, id, status) =>
     request(`/api/admin/print-jobs/${id}/complete`, {

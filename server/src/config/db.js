@@ -45,7 +45,7 @@ const QUOTED_IDENTIFIERS = [
   'receiptPrintedAt', 'completedAt', 'paidAt', 'orderId', 'variantId', 'variantName',
   'selectedModifiers', 'specialNotes', 'itemPrice', 'itemTotal', 'totalRevenue',
   'totalRefunds', 'dateKey', 'errorMessage', 'printedAt', 'itemName', 'activeCount',
-  'sessionStatus', 'idleMinutes',
+  'sessionStatus', 'idleMinutes', 'callRequestedAt',
 ];
 const IDENTIFIER_RE = new RegExp(`\\b(${QUOTED_IDENTIFIERS.join('|')})\\b`, 'g');
 

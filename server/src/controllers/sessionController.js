@@ -14,4 +14,13 @@ async function getSessionForTable(req, res) {
   res.json({ success: true, session, orders });
 }
 
-module.exports = { getSession, getSessionForTable };
+// Public, customer-facing — no login on the guest's phone. A tap here is
+// deliberately trusted the same way an order is: it just marks the table,
+// nothing else.
+async function callServer(req, res) {
+  const tableId = Number(req.params.tableId);
+  const session = await sessionModel.requestServerCall(tableId);
+  res.json({ success: true, session });
+}
+
+module.exports = { getSession, getSessionForTable, callServer };

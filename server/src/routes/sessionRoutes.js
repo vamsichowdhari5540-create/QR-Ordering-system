@@ -2,6 +2,7 @@ const express = require('express');
 const { param } = require('express-validator');
 const sessionController = require('../controllers/sessionController');
 const { validate } = require('../middleware/validate');
+const { callServerLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -10,6 +11,14 @@ router.get(
   [param('tableId').isInt({ min: 1, max: 50 }).toInt()],
   validate,
   sessionController.getSessionForTable
+);
+
+router.post(
+  '/table/:tableId/call-server',
+  callServerLimiter,
+  [param('tableId').isInt({ min: 1, max: 50 }).toInt()],
+  validate,
+  sessionController.callServer
 );
 
 router.get(

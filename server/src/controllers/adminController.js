@@ -239,6 +239,14 @@ async function closeSession(req, res) {
   });
 }
 
+// Staff has seen the "call server" alert and is heading to the table — clears
+// the blinking indicator on both the owner and floor dashboards.
+async function acknowledgeCall(req, res) {
+  const session = await sessionModel.acknowledgeServerCall(req.params.sessionId);
+  if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
+  res.json({ success: true, session });
+}
+
 // Day book for the owner: the day's takings plus every table visit behind them.
 async function getDayHistory(req, res) {
   const date = req.query.date || null;
@@ -371,6 +379,7 @@ module.exports = {
   setItemAvailability,
   closeSession,
   settleGuest,
+  acknowledgeCall,
   getDailySummary,
   getDayHistory,
   exportDayStatement,
